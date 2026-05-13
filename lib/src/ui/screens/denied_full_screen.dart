@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../models/permission_denied_config.dart';
 import '../dialogs/denied_dialog.dart';
+import '../widgets/wizard_slots.dart';
 import '../widgets/wizard_theme_scope.dart';
 
 /// Full-screen variant of the denied UI. Pushed via [Navigator.push].
-///
-/// Layout per spec section 10:
-/// - 80×80 icon centered
-/// - 22sp title, 15sp body (centered)
-/// - Action buttons stacked at the bottom with SafeArea + 24dp padding
+/// Honours every slot builder on [PermissionDeniedConfig] plus the
+/// layout knobs on [WizardTheme].
 class DeniedFullScreen extends StatelessWidget {
   final PermissionDeniedConfig config;
   final bool suppressOpenSettings;
@@ -44,111 +42,86 @@ class DeniedFullScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = WizardThemeScope.of(context);
+    final sectionGap = theme.resolvedSectionSpacing();
     final showOpenSettings =
         config.openSettingsText != null && !suppressOpenSettings;
     final showRetry = config.retryText != null;
+
+    final VoidCallback? onOpenSettings = showOpenSettings
+        ? () => Navigator.of(context).pop(DeniedAction.openSettings)
+        : null;
+    final VoidCallback? onRetry = showRetry
+        ? () => Navigator.of(context).pop(DeniedAction.retry)
+        : null;
+    void onSkip() => Navigator.of(context).pop(DeniedAction.skip);
+
+    final children = <Widget>[
+      if (isDismissible)
+        Align(
+          alignment: Alignment.topRight,
+          child: IconButton(
+            key: const Key('wizard.denied.fullscreen.close'),
+            icon: const Icon(Icons.close),
+            onPressed: onSkip,
+          ),
+        )
+      else
+        const SizedBox(height: 48),
+      const Spacer(),
+      if (config.headerBuilder != null) ...[
+        config.headerBuilder!(context, config),
+        SizedBox(height: sectionGap),
+      ],
+      config.iconBuilder?.call(context, config) ??
+          DefaultDeniedIcon(
+            config: config,
+            defaultContainerSize: 80,
+            defaultIconSize: 40,
+            defaultRadius: const BorderRadius.all(Radius.circular(20)),
+          ),
+      SizedBox(height: sectionGap + 8),
+      config.titleBuilder?.call(context, config) ??
+          DefaultDeniedTitle(
+            config: config,
+            defaultFontSize: 22,
+            defaultFontWeight: FontWeight.bold,
+          ),
+      const SizedBox(height: 12),
+      config.descriptionBuilder?.call(context, config) ??
+          DefaultDeniedDescription(
+            config: config,
+            defaultFontSize: 15,
+          ),
+      const Spacer(),
+      config.actionsBuilder?.call(
+            context,
+            config,
+            onOpenSettings,
+            onRetry,
+            onSkip,
+          ) ??
+          DefaultDeniedActions(
+            config: config,
+            onOpenSettings: onOpenSettings,
+            onRetry: onRetry,
+            onSkip: onSkip,
+            defaultSecondaryHeight: 48,
+            defaultSpacing: 16,
+          ),
+      if (config.footerBuilder != null) ...[
+        SizedBox(height: sectionGap),
+        config.footerBuilder!(context, config),
+      ],
+      const SizedBox(height: 24),
+    ];
 
     final body = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (isDismissible)
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                key: const Key('wizard.denied.fullscreen.close'),
-                icon: const Icon(Icons.close),
-                onPressed: () =>
-                    Navigator.of(context).pop(DeniedAction.skip),
-              ),
-            )
-          else
-            const SizedBox(height: 48),
-          const Spacer(),
-          Center(
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: theme.resolvedIconBackground(context),
-                borderRadius: const BorderRadius.all(Radius.circular(20)),
-              ),
-              alignment: Alignment.center,
-              child: config.iconWidget ??
-                  Icon(
-                    config.iconData ?? Icons.lock_outline,
-                    size: 40,
-                    color: theme.resolvedPrimary(context),
-                  ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            config.title,
-            style: theme.resolvedTitleStyle(context).copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            config.description,
-            style: theme.resolvedBodyStyle(context).copyWith(fontSize: 15),
-            textAlign: TextAlign.center,
-          ),
-          const Spacer(),
-          if (showOpenSettings)
-            SizedBox(
-              height: 48,
-              child: FilledButton(
-                key: const Key('wizard.denied.openSettings'),
-                style: theme.primaryButtonStyle ??
-                    FilledButton.styleFrom(
-                      backgroundColor: theme.resolvedPrimary(context),
-                      foregroundColor:
-                          Theme.of(context).colorScheme.onPrimary,
-                    ),
-                onPressed: () =>
-                    Navigator.of(context).pop(DeniedAction.openSettings),
-                child: Text(config.openSettingsText!),
-              ),
-            ),
-          if (showRetry) ...[
-            if (showOpenSettings) const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: FilledButton(
-                key: const Key('wizard.denied.retry'),
-                style: theme.primaryButtonStyle ??
-                    FilledButton.styleFrom(
-                      backgroundColor: theme.resolvedPrimary(context),
-                      foregroundColor:
-                          Theme.of(context).colorScheme.onPrimary,
-                    ),
-                onPressed: () =>
-                    Navigator.of(context).pop(DeniedAction.retry),
-                child: Text(config.retryText!),
-              ),
-            ),
-          ],
-          if (showOpenSettings || showRetry) const SizedBox(height: 16),
-          SizedBox(
-            height: 48,
-            child: TextButton(
-              key: const Key('wizard.denied.skip'),
-              style: theme.secondaryButtonStyle,
-              onPressed: () =>
-                  Navigator.of(context).pop(DeniedAction.skip),
-              child: Text(config.skipText),
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
+        children: children,
       ),
     );
-
     return Scaffold(
       backgroundColor: theme.resolvedSurface(context),
       body: theme.useSafeArea ? SafeArea(child: body) : body,

@@ -13,12 +13,32 @@ typedef PermissionDeniedBuilder = Widget Function(
   VoidCallback onSkip,
 );
 
+/// Builder signature for a single denied-screen *slot*.
+typedef PermissionDeniedSlotBuilder = Widget Function(
+  BuildContext context,
+  PermissionDeniedConfig config,
+);
+
+/// Builder signature for the denied-screen action row.
+typedef PermissionDeniedActionsBuilder = Widget Function(
+  BuildContext context,
+  PermissionDeniedConfig config,
+  VoidCallback? onOpenSettings,
+  VoidCallback? onRetry,
+  VoidCallback onSkip,
+);
+
 /// Configuration for the screen shown after the user denies the OS prompt.
 ///
 /// Two distinct instances are typically supplied to a
 /// [PermissionRequest]: one for *soft* denial (Android only) where a retry is
 /// possible, and one for *permanent* denial where the user must visit
 /// Settings.
+///
+/// See [PermissionRationale] for a detailed write-up of the customisation
+/// strategy (text overrides → [WizardTheme] → per-slot builders →
+/// header / footer → fully custom). The denied screen exposes the same
+/// layered API.
 @immutable
 class PermissionDeniedConfig {
   final Widget? iconWidget;
@@ -41,7 +61,31 @@ class PermissionDeniedConfig {
   /// Presentation style.
   final DeniedStyle style;
 
-  /// Custom override. When set, all UI rendering goes through this builder.
+  // ---------------------------------------------------------------------------
+  // Per-slot builders (composable customisation)
+  // ---------------------------------------------------------------------------
+
+  /// Replace only the icon section.
+  final PermissionDeniedSlotBuilder? iconBuilder;
+
+  /// Replace only the title section.
+  final PermissionDeniedSlotBuilder? titleBuilder;
+
+  /// Replace only the description section.
+  final PermissionDeniedSlotBuilder? descriptionBuilder;
+
+  /// Replace only the action row. Receives the (optional)
+  /// open-settings / retry callbacks and the always-on skip callback.
+  final PermissionDeniedActionsBuilder? actionsBuilder;
+
+  /// Widget rendered *above* the icon section.
+  final PermissionDeniedSlotBuilder? headerBuilder;
+
+  /// Widget rendered *below* the action buttons.
+  final PermissionDeniedSlotBuilder? footerBuilder;
+
+  /// Custom override. When set, all other slot builders and field
+  /// overrides are ignored — only [style] still applies.
   final PermissionDeniedBuilder? customBuilder;
 
   const PermissionDeniedConfig({
@@ -53,6 +97,12 @@ class PermissionDeniedConfig {
     this.retryText,
     this.skipText = 'Skip',
     this.style = DeniedStyle.dialog,
+    this.iconBuilder,
+    this.titleBuilder,
+    this.descriptionBuilder,
+    this.actionsBuilder,
+    this.headerBuilder,
+    this.footerBuilder,
     this.customBuilder,
   });
 
@@ -65,6 +115,12 @@ class PermissionDeniedConfig {
     Object? retryText = _sentinel,
     String? skipText,
     DeniedStyle? style,
+    PermissionDeniedSlotBuilder? iconBuilder,
+    PermissionDeniedSlotBuilder? titleBuilder,
+    PermissionDeniedSlotBuilder? descriptionBuilder,
+    PermissionDeniedActionsBuilder? actionsBuilder,
+    PermissionDeniedSlotBuilder? headerBuilder,
+    PermissionDeniedSlotBuilder? footerBuilder,
     PermissionDeniedBuilder? customBuilder,
   }) {
     return PermissionDeniedConfig(
@@ -80,6 +136,12 @@ class PermissionDeniedConfig {
           : retryText as String?,
       skipText: skipText ?? this.skipText,
       style: style ?? this.style,
+      iconBuilder: iconBuilder ?? this.iconBuilder,
+      titleBuilder: titleBuilder ?? this.titleBuilder,
+      descriptionBuilder: descriptionBuilder ?? this.descriptionBuilder,
+      actionsBuilder: actionsBuilder ?? this.actionsBuilder,
+      headerBuilder: headerBuilder ?? this.headerBuilder,
+      footerBuilder: footerBuilder ?? this.footerBuilder,
       customBuilder: customBuilder ?? this.customBuilder,
     );
   }

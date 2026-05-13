@@ -232,9 +232,76 @@ PermissionRequest(
 );
 ```
 
-For truly custom UIs use the `customBuilder` escape hatch on either
-`PermissionRationale` or `PermissionDeniedConfig` — you'll be handed
-callbacks for every action and render whatever widget you want.
+### Dynamic dialog customisation
+
+Customisation is layered — pick the lightest touch that gets the job
+done:
+
+| Level | API | Use when |
+| --- | --- | --- |
+| 1. **Text & icons** | `PermissionRationale(title: …, iconData: …)` | You just need to change copy or swap an icon. |
+| 2. **`WizardTheme`** | colors, paddings, button heights, action layout, bottom-sheet sizing, animations | You want a different look package-wide. |
+| 3. **Per-slot builders** | `iconBuilder`, `titleBuilder`, `descriptionBuilder`, `bulletsBuilder`, `actionsBuilder` | You want to replace **one** section but keep the rest of the default layout. |
+| 4. **Header / footer slots** | `headerBuilder`, `footerBuilder` | You need to inject extra content (badges, fine print) without rewriting anything. |
+| 5. **Full takeover** | `customBuilder` | You want to render any widget tree you like. |
+
+Levels 2–4 are new in `0.1.2` and compose freely. Example:
+
+```dart
+PermissionRequest(
+  permission: Permission.photos,
+  theme: WizardTheme.expressive().copyWith(
+    primaryColor: const Color(0xFFE94560),
+    iconBackgroundColor: const Color(0xFFFFEFF3),
+    actionsLayout: WizardActionsLayout.horizontal,
+  ),
+  rationale: PermissionRationale(
+    iconData: Icons.photo_library_rounded,
+    title: 'Spice up your profile',
+    description: 'Pick from your library to choose an avatar.',
+    headerBuilder: (ctx, r) => const _BadgeChip(text: 'NEW'),
+    footerBuilder: (ctx, r) => Text(
+      'You can revoke access any time from Settings.',
+      style: Theme.of(ctx).textTheme.bodySmall,
+      textAlign: TextAlign.center,
+    ),
+  ),
+);
+```
+
+#### Theme presets
+
+Use a ready-made `WizardTheme` as a starting point and `copyWith` over
+it:
+
+```dart
+WizardTheme.compact()      // tighter spacing, smaller icons
+WizardTheme.expressive()   // more breathing room, larger icons, 28-dp corners
+WizardTheme.minimal()      // stock AlertDialog vibe — no icon container fill
+```
+
+#### Reusable default slots
+
+If you're writing a custom builder but want to render the wizard's
+*own* icon / title / actions, the shared widgets are exported:
+
+```dart
+PermissionRationale(
+  title: 'T',
+  description: 'D',
+  actionsBuilder: (ctx, r, onAllow, onDeny) => Column(
+    children: [
+      DefaultRationaleActions(
+        rationale: r,
+        onAllow: onAllow,
+        onDeny: onDeny,
+      ),
+      const SizedBox(height: 8),
+      const Text('Tap "Allow" to continue.'),
+    ],
+  ),
+);
+```
 
 ---
 

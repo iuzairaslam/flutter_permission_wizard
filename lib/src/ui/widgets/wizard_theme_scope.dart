@@ -24,8 +24,7 @@ class WizardThemeScope extends InheritedWidget {
 
   /// Like [of] but does not register a dependency.
   static WizardTheme read(BuildContext context) {
-    final scope =
-        context.getInheritedWidgetOfExactType<WizardThemeScope>();
+    final scope = context.getInheritedWidgetOfExactType<WizardThemeScope>();
     return scope?.theme ?? const WizardTheme();
   }
 
@@ -36,6 +35,10 @@ class WizardThemeScope extends InheritedWidget {
 
 /// Convenience getters that materialize [WizardTheme] values, falling back
 /// to the ambient `ThemeData` when the [WizardTheme] field is null.
+///
+/// Custom builders supplied via `PermissionRationale.iconBuilder` etc.
+/// can call these helpers to render in lock-step with the rest of the
+/// wizard UI.
 extension ResolvedWizardTheme on WizardTheme {
   Color resolvedPrimary(BuildContext context) =>
       primaryColor ?? Theme.of(context).colorScheme.primary;
@@ -47,6 +50,9 @@ extension ResolvedWizardTheme on WizardTheme {
 
   Color resolvedIconBackground(BuildContext context) =>
       iconBackgroundColor ?? Theme.of(context).colorScheme.primaryContainer;
+
+  Color resolvedIconColor(BuildContext context) =>
+      iconColor ?? resolvedPrimary(context);
 
   TextStyle resolvedTitleStyle(BuildContext context) =>
       titleStyle ??
@@ -66,4 +72,41 @@ extension ResolvedWizardTheme on WizardTheme {
       const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
       );
+
+  double resolvedSectionSpacing() => sectionSpacing ?? 16;
+
+  double resolvedActionsSpacing() => actionsSpacing ?? 8;
+
+  double resolvedPrimaryButtonHeight() => primaryButtonHeight ?? 48;
+
+  double resolvedSecondaryButtonHeight() => secondaryButtonHeight ?? 40;
+
+  double resolvedIconSize() => iconSize ?? 32;
+
+  double resolvedIconContainerSize() => iconContainerSize ?? 64;
+
+  BorderRadius resolvedIconContainerRadius() =>
+      iconContainerRadius ??
+      const BorderRadius.all(Radius.circular(16));
+
+  double resolvedDialogMaxWidth() => dialogMaxWidth ?? 340;
+
+  double resolvedBottomSheetInitialSize() => bottomSheetInitialSize ?? 0.6;
+
+  double resolvedBottomSheetMinSize() => bottomSheetMinSize ?? 0.45;
+
+  double resolvedBottomSheetMaxSize() => bottomSheetMaxSize ?? 0.9;
+
+  /// Whether actions should render horizontally given the current
+  /// `BoxConstraints` width. Honours [WizardActionsLayout.auto].
+  bool useHorizontalActions(double availableWidth) {
+    switch (actionsLayout) {
+      case WizardActionsLayout.horizontal:
+        return true;
+      case WizardActionsLayout.vertical:
+        return false;
+      case WizardActionsLayout.auto:
+        return availableWidth >= actionsHorizontalBreakpoint;
+    }
+  }
 }

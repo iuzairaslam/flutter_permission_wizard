@@ -99,6 +99,59 @@ class _DemoHomeState extends State<DemoHome> {
     setState(() => _lastResult = 'Microphone → ${_describe(result)}');
   }
 
+  Future<void> _requestThemedPhotos() async {
+    final result = await PermissionWizard.request(
+      context: context,
+      request: PermissionRequest(
+        permission: Permission.photos,
+        theme: WizardTheme.expressive().copyWith(
+          primaryColor: const Color(0xFFE94560),
+          iconBackgroundColor: const Color(0xFFFFEFF3),
+          iconColor: const Color(0xFFE94560),
+          containerShape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(28)),
+          ),
+          actionsLayout: WizardActionsLayout.horizontal,
+        ),
+        rationale: PermissionRationale(
+          iconData: Icons.photo_library_rounded,
+          title: 'Spice up your profile',
+          description:
+              'Pick from your library to choose an avatar — we never upload '
+              'photos without your tap.',
+          allowButtonText: 'Pick a photo',
+          denyButtonText: 'Maybe later',
+          headerBuilder: (ctx, r) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE94560).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: const Text(
+              'NEW',
+              style: TextStyle(
+                color: Color(0xFFE94560),
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          footerBuilder: (ctx, r) => Text(
+            'You can revoke access any time from Settings → Privacy.',
+            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                  color:
+                      Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _lastResult = 'Themed photos → ${_describe(result)}');
+  }
+
   Future<void> _requestBatchVideoCall() async {
     final result = await PermissionWizard.requestBatch(
       context: context,
@@ -173,6 +226,13 @@ class _DemoHomeState extends State<DemoHome> {
             FilledButton(
               onPressed: _requestBatchVideoCall,
               child: const Text('Batch combined → Camera + Microphone'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _requestThemedPhotos,
+              child: const Text(
+                'Custom theme + header/footer slots → Photos',
+              ),
             ),
             const Spacer(),
             Container(

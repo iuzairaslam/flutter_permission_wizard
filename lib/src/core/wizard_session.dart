@@ -412,12 +412,14 @@ class WizardSession {
       );
       _dialogOpen = false;
     } else {
+      final wizardTheme = request.theme ?? WizardThemeScope.read(context);
       switch (rationale.style) {
         case RationaleStyle.dialog:
           _dialogOpen = true;
           result = await showDialog<RationaleAction>(
             context: context,
             barrierDismissible: rationale.isDismissible,
+            barrierColor: wizardTheme.barrierColor,
             builder: (ctx) => _wrapWithTheme(
               ctx,
               RationaleDialog(rationale: rationale),
@@ -433,6 +435,7 @@ class WizardSession {
             isDismissible: rationale.isDismissible,
             enableDrag: rationale.isDismissible,
             backgroundColor: Colors.transparent,
+            barrierColor: wizardTheme.barrierColor,
             builder: (ctx) => _wrapWithTheme(
               ctx,
               RationaleBottomSheet(rationale: rationale),
@@ -502,12 +505,14 @@ class WizardSession {
       );
       _dialogOpen = false;
     } else {
+      final wizardTheme = request.theme ?? WizardThemeScope.read(context);
       switch (config.style) {
         case DeniedStyle.dialog:
           _dialogOpen = true;
           result = await showDialog<DeniedAction>(
             context: context,
             barrierDismissible: false,
+            barrierColor: wizardTheme.barrierColor,
             builder: (ctx) => _wrapWithTheme(
               ctx,
               DeniedDialog(
@@ -525,6 +530,7 @@ class WizardSession {
             isScrollControlled: true,
             isDismissible: true,
             backgroundColor: Colors.transparent,
+            barrierColor: wizardTheme.barrierColor,
             builder: (ctx) => _wrapWithTheme(
               ctx,
               DeniedBottomSheet(
@@ -569,7 +575,10 @@ class WizardSession {
 
   Widget _wrapWithTheme(BuildContext context, Widget child) {
     final theme = request.theme ?? WizardThemeScope.read(context);
-    return WizardThemeScope(theme: theme, child: child);
+    final wrapped = WizardThemeScope(theme: theme, child: child);
+    final transition = theme.transitionBuilder;
+    if (transition == null) return wrapped;
+    return Builder(builder: (ctx) => transition(ctx, wrapped));
   }
 
   void _attachLifecycle() {

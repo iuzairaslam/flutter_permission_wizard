@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.1.2 — Dynamic dialog customisation
+
+### Added
+- **Per-slot builders** on `PermissionRationale` and
+  `PermissionDeniedConfig`: override just one section (`iconBuilder`,
+  `titleBuilder`, `descriptionBuilder`, `bulletsBuilder`,
+  `actionsBuilder`) without rewriting the whole dialog, or inject extra
+  content above/below via `headerBuilder` / `footerBuilder`.
+- **Expanded `WizardTheme`** with many new knobs:
+  - `iconColor`, `barrierColor`, `dragHandleColor`
+  - `titleAlign`, `descriptionAlign`
+  - `primaryButtonHeight`, `secondaryButtonHeight`
+  - `actionsLayout` (`vertical` / `horizontal` / `auto`),
+    `actionsHorizontalBreakpoint`, `actionsSpacing`
+  - `sectionSpacing`, `dialogMaxWidth`, `dialogInsetPadding`
+  - `iconSize`, `iconContainerSize`, `iconContainerRadius`
+  - `bottomSheetInitialSize`, `bottomSheetMinSize`, `bottomSheetMaxSize`
+  - `transitionBuilder` for custom dialog/sheet entry animations.
+- **Theme presets**: `WizardTheme.compact()`,
+  `WizardTheme.expressive()`, `WizardTheme.minimal()`.
+- `WizardTheme.mergeWith(other)` — layer a preset onto an app-wide base.
+- Public default-slot widgets (`DefaultRationaleIcon`,
+  `DefaultRationaleTitle`, `DefaultRationaleDescription`,
+  `DefaultRationaleBullets`, `DefaultRationaleActions`,
+  `DefaultDeniedIcon`, `DefaultDeniedTitle`,
+  `DefaultDeniedDescription`, `DefaultDeniedActions`) for reuse from
+  user-supplied builders.
+- `ResolvedWizardTheme` extension is now exported so custom builders can
+  reuse the same resolution helpers the wizard uses internally
+  (`resolvedPrimary`, `resolvedSectionSpacing`, `useHorizontalActions`,
+  …).
+- Nine new widget tests in `test/widget/dialog_customisation_test.dart`
+  cover header/footer/icon/actions/description slot overrides, theme
+  presets, `copyWith` / `mergeWith`, and the dual `Open Settings + Retry`
+  rendering path.
+
+### Changed
+- Denied dialog/sheet/full-screen layouts now correctly render **both**
+  `Open Settings` and `Try Again` simultaneously when both labels are
+  supplied (a regression introduced internally during the slot
+  refactor — caught and locked down by a test).
+- Theme-driven `barrierColor` is now applied to dialogs and bottom
+  sheets created by the orchestrator.
+
 ## 0.1.1 — Stability hardening
 
 ### Added

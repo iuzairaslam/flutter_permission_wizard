@@ -47,6 +47,14 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>The example app requests camera access to demonstrate the wizard's rationale → OS prompt → settings round-trip flow.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The example app requests microphone access to demonstrate the wizard's batch permission flow.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The example app requests location access to demonstrate the wizard's restricted / denied recovery flow.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>The example app requests photo library access to demonstrate the wizard's limited / full grant flow.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

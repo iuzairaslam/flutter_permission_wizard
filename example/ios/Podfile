@@ -39,5 +39,17 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      # Tell permission_handler which permissions this example needs at
+      # compile time. Without these macros every permission returns
+      # `restricted` on iOS regardless of the Info.plist usage strings.
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_MICROPHONE=1',
+        'PERMISSION_LOCATION=1',
+        'PERMISSION_PHOTOS=1',
+      ]
+    end
   end
 end

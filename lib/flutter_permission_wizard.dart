@@ -48,4 +48,18 @@ export 'src/core/settings_launcher.dart' show SettingsLauncher;
 
 // UI widgets
 export 'src/ui/widgets/permission_wizard_builder.dart';
-export 'src/ui/widgets/wizard_theme_scope.dart' show WizardThemeScope;
+export 'src/ui/widgets/wizard_theme_scope.dart'
+    show WizardThemeScope, ResolvedWizardTheme;
+// Default slot widgets — reusable building blocks for custom builders.
+export 'src/ui/widgets/wizard_slots.dart'
+    show
+        DefaultRationaleIcon,
+        DefaultRationaleTitle,
+        DefaultRationaleDescription,
+        DefaultRationaleBullets,
+        DefaultRationaleActions,
+        DefaultDeniedIcon,
+        DefaultDeniedTitle,
+        DefaultDeniedDescription,
+        DefaultDeniedActions;
+export 'src/ui/widgets/permission_bullet_item.dart' show PermissionBulletItem;
