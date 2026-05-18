@@ -1,7 +1,7 @@
 # flutter_permission_wizard
 
 <p align="center">
-  <img src="doc/cover.png" alt="Permission wizard flow: rationale, system dialog, settings" width="100%" />
+  <img src="doc/cover.png" alt="flutter_permission_wizard — rationale, system prompt, and settings recovery" width="100%" />
 </p>
 
 Hey — if you’ve ever shipped permissions in Flutter, you know the drill. [`permission_handler`](https://pub.dev/packages/permission_handler) tells you what the OS thinks… but it doesn’t help you *talk to humans*. Everyone ends up rebuilding the same story:
@@ -18,7 +18,7 @@ It rides on `permission_handler` (plus app settings under the hood), stays easy 
 
 ```yaml
 dependencies:
-  flutter_permission_wizard: ^0.1.3
+  flutter_permission_wizard: ^0.1.4
 ```
 
 `flutter pub get`, then carry on. Whatever platform strings or manifest lines your permissions need — camera, mic, photos — that doesn’t magically disappear; this just handles the *conversation* with your user.

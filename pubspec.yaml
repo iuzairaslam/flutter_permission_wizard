@@ -1,6 +1,6 @@
 name: flutter_permission_wizard
 description: "Declarative permission wizard for Flutter: themeable rationale, denial, restricted, and settings flows built on permission_handler."
-version: 0.1.3
+version: 0.1.4
 homepage: https://github.com/iuzairaslam/flutter_permission_wizard
 repository: https://github.com/iuzairaslam/flutter_permission_wizard
 issue_tracker: https://github.com/iuzairaslam/flutter_permission_wizard/issues

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 — README cover
+
+### Changed
+- New README banner image (`doc/cover.png`).
+
 ## 0.1.3 — Pub hygiene, deps, and docs
 
 ### Changed
