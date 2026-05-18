@@ -433,7 +433,7 @@ class _StackedActions extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (primary != null) primary!,
+            ?primary,
             if (primary != null) SizedBox(height: spacing),
             secondary,
           ],

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.3 — Pub hygiene, deps, and docs
+
+### Changed
+- **README** rewritten for a shorter, friendlier quick start while keeping
+  the same APIs and examples.
+- **`pubspec.yaml`**: shorter package description (pub.dev convention),
+  widened direct deps to current stable (`permission_handler` ^12,
+  `app_settings` ^7), and **`flutter_lints` ^6**.
+- Minor lint-driven tweaks (`wizard_session.dart`, `wizard_slots.dart`)
+  for a clean `dart analyze` under the latest lints.
+
+### Housekeeping
+- Example app `flutter_lints` aligned with the package.
+
 ## 0.1.2 — Dynamic dialog customisation
 
 ### Added

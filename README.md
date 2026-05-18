@@ -1,34 +1,33 @@
 # flutter_permission_wizard
 
 <p align="center">
-  <img src="doc/cover.png" alt="flutter_permission_wizard — rationale → OS prompt → Settings round-trip" width="100%" />
+  <img src="doc/cover.png" alt="Permission wizard flow: rationale, system dialog, settings" width="100%" />
 </p>
 
-A declarative, state-machine-driven permission flow for Flutter that fills the
-gap between `permission_handler` (great OS API, zero UX) and what every
-production app actually ships: a polished pre-prompt rationale, a clear
-denied-state recovery flow, a Settings-app round-trip, and exhaustive
-result handling.
+Hey — if you’ve ever shipped permissions in Flutter, you know the drill. [`permission_handler`](https://pub.dev/packages/permission_handler) tells you what the OS thinks… but it doesn’t help you *talk to humans*. Everyone ends up rebuilding the same story:
 
-Everything is fully themeable, fully testable, and ships as a pure Dart
-package — no extra native code, no plugin registration steps.
+Explain why you’re asking → show the system sheet → handle “not now” without sounding robotic → send people to Settings when the OS won’t nag them again.
+
+**That whole flow is what this package tries to save you from wiring yourself.**
+
+It rides on `permission_handler` (plus app settings under the hood), stays easy to theme, and you can still test it without juggling twelve phones. On your side it’s “just Dart” — you already handle plist/manifest bits like you always did.
 
 ---
 
-## Why this exists
+## Drop it in
 
-`permission_handler` answers one question: *what does the OS say about this
-permission right now?* Every team then rebuilds the same things on top:
+```yaml
+dependencies:
+  flutter_permission_wizard: ^0.1.3
+```
 
-- A rationale dialog explaining *why* you need the permission.
-- A "you denied it; here's how to fix it" screen.
-- A round-trip to the Settings app with a status re-check on resume.
-- Platform-specific quirks: iOS-first-denial-is-permanent, Android-
-  shouldShowRequestPermissionRationale, Android-13 split storage perms,
-  iOS Photos limited grants, …
+`flutter pub get`, then carry on. Whatever platform strings or manifest lines your permissions need — camera, mic, photos — that doesn’t magically disappear; this just handles the *conversation* with your user.
 
-`flutter_permission_wizard` ships all of this as a single, themed
-state-machine you configure declaratively and hand control to:
+---
+
+## Start here (honestly, this might be enough)
+
+Paste this, rename things so they sound like *your* app, ship dinner:
 
 ```dart
 final result = await PermissionWizard.request(
@@ -37,14 +36,14 @@ final result = await PermissionWizard.request(
     permission: Permission.camera,
     rationale: PermissionRationale(
       iconData: Icons.camera_alt_rounded,
-      title: 'Camera Access',
-      description: 'Used to scan QR codes and take profile photos.',
-      allowButtonText: 'Allow Camera',
-      denyButtonText: 'Not Now',
+      title: 'Camera access',
+      description: 'We use the camera to scan QR codes and update your profile photo.',
+      allowButtonText: 'Continue',
+      denyButtonText: 'Not now',
     ),
     deniedConfig: PermissionDeniedConfig(
-      title: 'Camera is off',
-      description: 'Turn on camera access in settings to continue.',
+      title: 'Camera is turned off',
+      description: 'Turn camera access on in Settings to use this feature.',
       openSettingsText: 'Open Settings',
       skipText: 'Skip for now',
     ),
@@ -52,136 +51,78 @@ final result = await PermissionWizard.request(
 );
 
 switch (result) {
-  case GrantedResult():    launchCamera();
-  case LimitedResult():    launchCamera();         // iOS Photos
-  case DeniedResult():     showDegradedMode();
-  case RestrictedResult(): showRestrictedMessage();
-  case CancelledResult():  break;
+  case GrantedResult():
+  case LimitedResult(): // e.g. limited Photos on iOS
+    launchCamera();
+  case DeniedResult():
+    showDegradedMode();
+  case RestrictedResult():
+    showRestrictedMessage();
+  case CancelledResult():
+    break;
 }
 ```
 
----
-
-## Installation
-
-```yaml
-dependencies:
-  flutter_permission_wizard: ^0.1.0
-```
-
-The package brings in `permission_handler` and `app_settings` transitively;
-follow each plugin's platform-setup guide (Info.plist usage descriptions,
-Android manifest entries) per the permission you intend to request.
+One await: friendly heads-up → OS prompt → “oops, here’s how to fix it” if needed → typed result at the end. No judgement if someone taps away.
 
 ---
 
-## The state machine
+## Pick how you want to drive it
 
-Every wizard run drives this finite-state machine:
+There isn’t one “right” API — depends how your screen is built:
 
-```
-IDLE
-  └─▶ CHECKING_STATUS
-        ├─▶ GRANTED           (already granted → call onGranted, done)
-        ├─▶ RESTRICTED        (MDM/parental → show restricted screen, done)
-        └─▶ NEEDS_REQUEST
-              └─▶ SHOWING_RATIONALE        (if rationale configured)
-                    ├─▶ CANCELLED          (user tapped "Not Now")
-                    └─▶ REQUESTING_OS
-              └─▶ REQUESTING_OS            (skip rationale if not configured)
-                    ├─▶ GRANTED            (OS granted → done)
-                    ├─▶ DENIED_SOFT        (Android first-time denial)
-                    │     ├─▶ SHOWING_RATIONALE  (user tapped "Try Again")
-                    │     └─▶ CANCELLED          (user tapped "Skip")
-                    └─▶ DENIED_PERMANENT
-                          ├─▶ OPENING_SETTINGS
-                          │     └─▶ AWAITING_RESUME
-                          │           └─▶ CHECKING_STATUS  (on app foreground)
-                          └─▶ CANCELLED          (user tapped "Skip")
-```
+| If you… | Reach for |
+| ------- | --------- |
+| …just want “when they tap this button, ask nicely” | **`PermissionWizard.request(...)`** |
+| …want the UI to react while permission state changes | **`PermissionWizardBuilder`** |
+| …fire the flow from somewhere outside the widget tree (BLoC, repo, whatever) | **`PermissionWizardController`** |
 
-You can introspect or unit-test the FSM directly through
-`PermissionStateMachine`.
-
----
-
-## Three ways to use it
-
-### 1. Static imperative API
-
-For one-shot requests at a specific moment in code (button tap, navigation
-event, etc).
-
-```dart
-final result = await PermissionWizard.request(
-  context: context,
-  request: PermissionRequest(
-    permission: Permission.microphone,
-    rationale: PermissionRationale(
-      title: 'Microphone access',
-      description: 'So we can record your voice messages.',
-      allowButtonText: 'Allow',
-      denyButtonText: 'Not Now',
-      style: RationaleStyle.bottomSheet,
-    ),
-  ),
-);
-```
-
-### 2. Reactive builder widget
-
-For screens where the rendered UI depends on the current permission state
-and you want it to rebuild automatically.
+**Living inside a widget tree:**
 
 ```dart
 PermissionWizardBuilder(
   request: PermissionRequest(
     permission: Permission.locationWhenInUse,
     rationale: PermissionRationale(
-      title: 'Location for Nearby Results',
-      description: 'We use your location to show restaurants near you.',
+      title: 'Location',
+      description: 'Used to show places near you.',
     ),
   ),
   builder: (context, status, requestPermission) {
     return switch (status) {
-      WizardStatus.granted    => const MapWidget(),
-      WizardStatus.denied     => TextButton(
-        onPressed: requestPermission,
-        child: const Text('Enable Location'),
-      ),
+      WizardStatus.granted => const MapWidget(),
+      WizardStatus.denied => TextButton(
+          onPressed: requestPermission,
+          child: const Text('Enable location'),
+        ),
       WizardStatus.restricted => const RestrictedPlaceholder(),
-      _                       => const SizedBox.shrink(),
+      _ => const SizedBox.shrink(),
     };
   },
 )
 ```
 
-### 3. Controller-driven flow
-
-When you need to trigger a wizard from outside the widget tree (BLoC,
-ViewModel, etc.) or coordinate multiple permissions yourself.
+**Driving it yourself:**
 
 ```dart
 final controller = PermissionWizardController(
-  request: PermissionRequest(permission: Permission.microphone, /* ... */),
+  request: PermissionRequest(permission: Permission.microphone, /* … */),
 );
 
-controller.stream.listen((status) => debugPrint('mic status = $status'));
-
 await controller.requestPermission(context);
-if (controller.isGranted) { /* … */ }
+if (controller.isGranted) {
+  // …
+}
 ```
 
 ---
 
-## Batch requests
+## Asking for more than one thing
 
-Request several permissions in one flow. Two strategies:
+Camera *and* mic? **`PermissionWizard.requestBatch`** has your back:
 
-- `BatchStrategy.combined` — show one shared rationale, then run OS prompts
-  sequentially. Best for "video call needs camera **and** microphone".
-- `BatchStrategy.sequential` — run a full wizard per permission. Best when
-  permissions are optional and unrelated.
+- **`BatchStrategy.combined`** — “Here’s why we need both,” then the OS dialogs show up in order. Feels natural when the feature genuinely needs everything.
+- **`BatchStrategy.sequential`** — treat each permission like its own mini story. Handy when users might grant one and bail on the other.
 
 ```dart
 final result = await PermissionWizard.requestBatch(
@@ -189,13 +130,13 @@ final result = await PermissionWizard.requestBatch(
   request: BatchPermissionRequest(
     strategy: BatchStrategy.combined,
     batchRationale: PermissionRationale(
-      title: 'Video Calling Needs Two Things',
-      description: 'Camera for video, microphone for audio.',
+      title: 'Video calls',
+      description: 'We need your camera and microphone for calls.',
       bullets: [
         PermissionBullet(icon: Icons.camera_alt, label: 'Camera'),
-        PermissionBullet(icon: Icons.mic,         label: 'Microphone'),
+        PermissionBullet(icon: Icons.mic, label: 'Microphone'),
       ],
-      allowButtonText: 'Allow Both',
+      allowButtonText: 'Allow both',
     ),
     permissions: [
       PermissionRequest(permission: Permission.camera),
@@ -207,227 +148,38 @@ final result = await PermissionWizard.requestBatch(
 if (result.allGranted) startVideoCall();
 ```
 
-`BatchPermissionWizardResult` exposes per-permission results plus
-`allGranted`, `anyGranted`, `grantedPermissions`, `deniedPermissions`.
+---
+
+## Make it feel like *your* product
+
+Out of the box it respects **`Theme.of(context)`**, so dark mode and Material 3 mostly Just Work™.
+
+Want more personality? Slap on a **`WizardTheme`** — colors, spacing, chunky buttons, whatever.
+
+Still not enough? You can tuck stuff above/below with **`headerBuilder`** / **`footerBuilder`**, swap individual chunks with slot builders, or go full **`customBuilder`** if you’re picky (no shame).
+
+Quick vibes to start from: **`WizardTheme.compact()`**, **`WizardTheme.expressive()`**, **`WizardTheme.minimal()`** — then **`copyWith`** the bits you care about.
+
+Same screens can show as a centered dialog, a bottom sheet, or full-screen via **`RationaleStyle`** / **`DeniedStyle`** — flip it without rewriting your logic.
 
 ---
 
-## Theming
+## iOS vs Android (the boring-but-important bit)
 
-Every UI surface listens to the ambient `ThemeData` (light/dark/M3) so it
-"just works" out of the box. Override anything via `WizardTheme`:
+**iOS** likes to make the first “no” stick — so the wizard behaves accordingly. Limited photo library access surfaces as **`LimitedResult`** so you can still do something useful. Provisional notifications are treated as good enough to move forward.
 
-```dart
-PermissionRequest(
-  permission: Permission.camera,
-  theme: WizardTheme(
-    primaryColor: Colors.deepPurple,
-    iconBackgroundColor: Colors.deepPurple.shade50,
-    primaryButtonStyle: FilledButton.styleFrom(
-      backgroundColor: Colors.deepPurple,
-      shape: const StadiumBorder(),
-    ),
-  ),
-  ...
-);
-```
+**Android** cares whether the user might still see another prompt or whether you’re in “only Settings can save us” territory — that split is handled for you. Double-check you’re requesting the **`Permission.*`** that matches your **`targetSdkVersion`** (media splits on newer Androids are easy to trip over).
 
-### Dynamic dialog customisation
-
-Customisation is layered — pick the lightest touch that gets the job
-done:
-
-| Level | API | Use when |
-| --- | --- | --- |
-| 1. **Text & icons** | `PermissionRationale(title: …, iconData: …)` | You just need to change copy or swap an icon. |
-| 2. **`WizardTheme`** | colors, paddings, button heights, action layout, bottom-sheet sizing, animations | You want a different look package-wide. |
-| 3. **Per-slot builders** | `iconBuilder`, `titleBuilder`, `descriptionBuilder`, `bulletsBuilder`, `actionsBuilder` | You want to replace **one** section but keep the rest of the default layout. |
-| 4. **Header / footer slots** | `headerBuilder`, `footerBuilder` | You need to inject extra content (badges, fine print) without rewriting anything. |
-| 5. **Full takeover** | `customBuilder` | You want to render any widget tree you like. |
-
-Levels 2–4 are new in `0.1.2` and compose freely. Example:
-
-```dart
-PermissionRequest(
-  permission: Permission.photos,
-  theme: WizardTheme.expressive().copyWith(
-    primaryColor: const Color(0xFFE94560),
-    iconBackgroundColor: const Color(0xFFFFEFF3),
-    actionsLayout: WizardActionsLayout.horizontal,
-  ),
-  rationale: PermissionRationale(
-    iconData: Icons.photo_library_rounded,
-    title: 'Spice up your profile',
-    description: 'Pick from your library to choose an avatar.',
-    headerBuilder: (ctx, r) => const _BadgeChip(text: 'NEW'),
-    footerBuilder: (ctx, r) => Text(
-      'You can revoke access any time from Settings.',
-      style: Theme.of(ctx).textTheme.bodySmall,
-      textAlign: TextAlign.center,
-    ),
-  ),
-);
-```
-
-#### Theme presets
-
-Use a ready-made `WizardTheme` as a starting point and `copyWith` over
-it:
-
-```dart
-WizardTheme.compact()      // tighter spacing, smaller icons
-WizardTheme.expressive()   // more breathing room, larger icons, 28-dp corners
-WizardTheme.minimal()      // stock AlertDialog vibe — no icon container fill
-```
-
-#### Reusable default slots
-
-If you're writing a custom builder but want to render the wizard's
-*own* icon / title / actions, the shared widgets are exported:
-
-```dart
-PermissionRationale(
-  title: 'T',
-  description: 'D',
-  actionsBuilder: (ctx, r, onAllow, onDeny) => Column(
-    children: [
-      DefaultRationaleActions(
-        rationale: r,
-        onAllow: onAllow,
-        onDeny: onDeny,
-      ),
-      const SizedBox(height: 8),
-      const Text('Tap "Allow" to continue.'),
-    ],
-  ),
-);
-```
+Curious about edge cases — app goes to background mid-dialog, two requests racing, analytics hooks — peek at **`PermissionWizardCallbacks`** and **`PermissionStateMachine`** in the source; the README would turn into a novel if we listed every scenario here.
 
 ---
 
-## Presentation styles
+## Testing without borrowing someone’s phone
 
-`PermissionRationale.style` and `PermissionDeniedConfig.style` switch
-between three layouts without any other code changes:
-
-| Style                       | Use it when                                                |
-| --------------------------- | ---------------------------------------------------------- |
-| `RationaleStyle.dialog`     | Default — centered modal `AlertDialog`.                    |
-| `RationaleStyle.bottomSheet`| You want a slide-up sheet, e.g. on a content-heavy screen. |
-| `RationaleStyle.fullScreen` | Onboarding-style flows where the rationale gets a screen.  |
-| `DeniedStyle.dialog`        | Quick recovery from soft denial.                           |
-| `DeniedStyle.bottomSheet`   | Less interruptive recovery prompt.                         |
-| `DeniedStyle.fullScreen`    | When the permission gates a primary feature.               |
-
----
-
-## Platform differences (handled for you)
-
-The package abstracts the platform via `PlatformPermissionChecker`. Two
-concrete implementations ship out of the box, picked automatically.
-
-### iOS
-
-- First denial is *permanent* — there is no soft-denial concept. The
-  package stores a per-permission "has been asked" flag in memory (use a
-  custom `WizardPreferencesStorage` if you need persistence across
-  cold starts) and surfaces denials as permanent for any second-or-later
-  attempt.
-- `PermissionStatus.limited` (iOS 14+ Photos) becomes `LimitedResult` so
-  you can offer a "Select more photos" action without branching on the
-  raw `PermissionStatus` enum.
-- `PermissionStatus.provisional` (iOS 12+ Notifications) is treated as
-  granted.
-
-### Android
-
-- `shouldShowRequestPermissionRationale` disambiguates soft denial from
-  "don't ask again" so the package can show the correct UI.
-- Android 13+ image/audio split — `Permission.photos`, `Permission.videos`,
-  `Permission.audio` — is **not** auto-translated. Pass the permission your
-  app's `targetSdkVersion` expects.
-- Android 12+ `Permission.locationAlways` requires showing
-  `locationWhenInUse` first; `permission_handler` chains this transparently.
-
----
-
-## Edge cases (all handled)
-
-| Scenario                                            | Behaviour                                                       |
-| --------------------------------------------------- | --------------------------------------------------------------- |
-| Permission already granted                          | Returns `GrantedResult` immediately, no UI shown.               |
-| Concurrent `PermissionWizard.request()` calls       | Queued internally — at most one wizard visible at a time.       |
-| App backgrounded mid-flow                           | Current dialog is dismissed, returns `CancelledResult(app_backgrounded)`. |
-| User returns from Settings unchanged                | Re-shows the denied screen with the *Open Settings* button suppressed (only Skip remains). |
-| Max-retry budget exhausted                          | Returns `CancelledResult(max_retries_exceeded)`.                |
-| iOS notification permission                         | Routed through `permission_handler`'s notification API. The wizard treats `provisional` as granted. |
-| Dark mode                                           | Every component inherits from `Theme.of(context)`.              |
-| Disposed `BuildContext` between async gaps          | Wizard short-circuits with `CancelledResult(app_backgrounded)`. |
-
----
-
-## Observing the flow
-
-All side-effect-free hooks live on `PermissionWizardCallbacks`. None of
-them affect the result.
-
-```dart
-PermissionRequest(
-  /* ... */
-  callbacks: PermissionWizardCallbacks(
-    onRationaleShown:     () => analytics.track('rationale_shown'),
-    onRationaleAccepted:  () => analytics.track('rationale_accepted'),
-    onRationaleDismissed: () => analytics.track('rationale_dismissed'),
-    onOSDialogPresented:  () => analytics.track('os_dialog'),
-    onGranted:            () => analytics.track('granted'),
-    onDenied: (isPermanent) =>
-        analytics.track(isPermanent ? 'denied_permanent' : 'denied_soft'),
-    onSettingsOpened: () => analytics.track('settings_opened'),
-    onReturnedFromSettings: (status) =>
-        analytics.track('returned_from_settings', {'status': status.name}),
-    onCancelled: (reason) =>
-        analytics.track('cancelled', {'reason': reason}),
-  ),
-);
-```
-
-Cancel reasons (`WizardCancelReason`):
-`rationale_dismissed`, `soft_denied_skipped`, `permanent_denied_skipped`,
-`max_retries_exceeded`, `app_backgrounded`, `restricted_dismissed`.
-
----
-
-## Testing
-
-The package is fully testable without a real device:
-
-- The state machine (`PermissionStateMachine`) is pure Dart — feed it
-  `WizardEvent`s and assert on the resulting `WizardPhase`.
-- Inject a custom `PlatformPermissionChecker` via
-  `PermissionWizard.debugConfigure(checker: …)` to script any sequence of
-  `PermissionStatus` and `RequestOutcome` values.
-- A `FakeSettingsLauncher` is provided for simulating the Settings
-  round-trip.
-- `AppLifecycleObserver.emit(...)` (visible-for-testing) lets you simulate
-  background/resume events.
-
-Example:
-
-```dart
-PermissionWizard.debugConfigure(
-  checker: FakeChecker(
-    statusScript: [PermissionStatus.denied],
-    requestScript: [RequestOutcome.granted],
-  ),
-  settingsLauncher: FakeSettingsLauncher(),
-);
-```
-
-See `test/` for ~70 unit, widget, and golden tests covering every
-documented edge case.
+Hook **`PermissionWizard.debugConfigure`** with a fake checker and **`FakeSettingsLauncher`**, spin up **`PermissionStateMachine`** in plain Dart tests, and sleep better. The **`test/`** folder has plenty of copy-paste fuel.
 
 ---
 
 ## License
 
-MIT. See `LICENSE`.
+MIT — see **`LICENSE`**.

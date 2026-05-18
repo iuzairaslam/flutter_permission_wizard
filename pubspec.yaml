@@ -1,6 +1,6 @@
 name: flutter_permission_wizard
-description: "Declarative, state-machine-driven permission flow wizard for Flutter. Builds on permission_handler to provide a complete, themeable UX for rationale, denial, restricted, and Settings-return flows."
-version: 0.1.2
+description: "Declarative permission wizard for Flutter: themeable rationale, denial, restricted, and settings flows built on permission_handler."
+version: 0.1.3
 homepage: https://github.com/iuzairaslam/flutter_permission_wizard
 repository: https://github.com/iuzairaslam/flutter_permission_wizard
 issue_tracker: https://github.com/iuzairaslam/flutter_permission_wizard/issues
@@ -17,13 +17,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  permission_handler: ^11.3.0
-  app_settings: ^5.1.1
+  permission_handler: ^12.0.0
+  app_settings: ^7.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
   mocktail: ^1.0.0
 
 flutter:

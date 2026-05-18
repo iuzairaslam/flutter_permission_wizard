@@ -400,7 +400,7 @@ class WizardSession {
         PageRouteBuilder<RationaleAction>(
           opaque: false,
           fullscreenDialog: true,
-          pageBuilder: (ctx, _, __) => _wrapWithTheme(
+          pageBuilder: (ctx, _, _) => _wrapWithTheme(
             ctx,
             rationale.customBuilder!(
               ctx,
@@ -488,7 +488,7 @@ class WizardSession {
         PageRouteBuilder<DeniedAction>(
           opaque: false,
           fullscreenDialog: true,
-          pageBuilder: (ctx, _, __) => _wrapWithTheme(
+          pageBuilder: (ctx, _, _) => _wrapWithTheme(
             ctx,
             config.customBuilder!(
               ctx,
